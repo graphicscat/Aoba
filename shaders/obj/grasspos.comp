@@ -1,0 +1,44 @@
+#version 450
+
+#extension GL_GOOGLE_include_directive : enable
+
+#include "simplex.glsl"
+
+struct GrassData
+{
+    vec3 pos;
+    vec2 uv;
+};
+
+layout(std140, binding = 0) buffer InstancingData {
+   GrassData instancingData[ ];
+};
+
+layout(local_size_x = 256,local_size_y = 1,local_size_z = 1) in;
+
+
+void main()
+{
+    GrassData grass;
+    float dimension = 512.0;
+
+    uint x = gl_GlobalInvocationID.x % int(dimension);
+    uint y = gl_GlobalInvocationID.x / int(dimension);
+
+    vec2 id = vec2(float(x),float(y));
+
+    vec3 pos = vec3(0.0);
+    pos.xz = (id.xy - vec2(dimension) * 0.5)*0.15;
+
+    pos.x += snoise(vec3(pos.xz, 0.0) * 3.0) * 0.05;
+    pos.z += snoise(vec3(pos.xz, 0.0) * 4.0) * 0.05;
+
+    vec2 uv = pos.xz;
+    uv /= dimension*0.15;
+
+    grass.pos = pos;
+    grass.uv = uv;
+
+    instancingData[gl_GlobalInvocationID.x] = grass;
+
+}

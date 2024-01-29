@@ -1,0 +1,30 @@
+#version 450
+
+#extension GL_GOOGLE_include_directive : enable
+
+#include "simplex.glsl"
+
+layout (binding = 0) uniform ParameterUBO {
+    float time;
+} ubo;
+
+layout (binding = 1, rgba16f) uniform image2D windTex;
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+void main()
+{
+    vec3 id = vec3(gl_GlobalInvocationID.x,gl_GlobalInvocationID.y,1.0);
+
+    float xPeriod = 0.05f; // Repetition of lines in x direction
+    float yPeriod = 0.1f; // Repitition of lines in y direction
+    float turbPower = 2.3f;
+    float turbSize = 2.0f;
+
+    float _Amplitude = 1.0;
+    float _Frequency = 0.5;
+    float xyValue = id.x * xPeriod + id.y * yPeriod + turbPower * snoise(id * turbSize);
+    float sineValue = (sin((xyValue + ubo.time) * _Frequency) + 1.5f) * _Amplitude;
+    ivec2 scrpos = ivec2(id);
+    imageStore(windTex,scrpos,vec4(sineValue,0.0,0.0,0.0));
+}

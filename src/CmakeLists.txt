@@ -1,0 +1,20 @@
+find_package(Vulkan REQUIRED)
+
+file(GLOB_RECURSE source CONFIGURE_DEPENDS ./*.cpp ./*.h)
+
+#message(${engine_header})
+
+add_executable(engine ${source})
+target_link_libraries(engine PUBLIC 
+    glfw 
+    tinygltf
+    spdlog
+    Vulkan::Vulkan
+    glm
+    tinyobjloader
+)
+#target_include_directories(engine PUBLIC 3rdlibs/tinygltf)
+target_precompile_headers(engine PUBLIC ./pch.h)
+
+target_include_directories(engine PUBLIC ./ ${Vulkan_INCLUDE_DIR})
+

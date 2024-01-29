@@ -1,0 +1,85 @@
+#version 450
+
+float SUN_TRANSMITTANCE_STEP  = 40.0;
+
+#extension GL_GOOGLE_include_directive : enable
+
+#include "common.glsl"
+
+layout (binding = 0)uniform AtmosphereParam
+{
+    vec4 transSkyLUTRes;
+    vec3 rayleighScatteringBase;
+    float rayleighScaleHeight;
+    float groundRadiusMM;
+    float atmosphereRadiusMM;
+    float iTime;
+}atmos;
+
+layout (binding = 1, rgba16f) uniform image2D transmittanceLUT;
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+vec3 getSunTransmittance(vec3 pos, vec3 sunDir)
+{
+    if (rayIntersectSphere(pos, sunDir, atmos.groundRadiusMM) > 0.0) {
+        return vec3(0.0);
+    }
+
+    float atmoDist = rayIntersectSphere(pos, sunDir, atmos.atmosphereRadiusMM);
+    float t = 0.0;
+
+    vec3 sum = vec3(1.0);
+
+    for(float i = 0.0 ;i < SUN_TRANSMITTANCE_STEP; i += 1.0)
+    {
+        float newT = ((i + 0.3)/float(SUN_TRANSMITTANCE_STEP))*atmoDist;
+        float dt = newT - t;
+        t = newT;
+
+        vec3 newPos = pos + t*sunDir;
+        
+        vec3 rayleighScattering, extinction;
+
+        float altitudeKM = (length(newPos)-atmos.groundRadiusMM)*1000.0;
+        // Note: Paper gets these switched up.
+        float rayleighDensity = exp(-altitudeKM/atmos.rayleighScaleHeight);
+
+        sum *= exp(-atmos.rayleighScatteringBase * rayleighDensity * dt);
+    }
+
+    return sum;
+
+}
+
+void main()
+{
+    ivec2 scrpos = ivec2(gl_GlobalInvocationID.x,gl_GlobalInvocationID.y);
+
+    vec2 uv = vec2(float(scrpos.x),float(scrpos.y))/atmos.transSkyLUTRes.xy;
+
+    uv.y = 1.0 - uv.y;
+
+    //uv = atmos.transSkyLUTRes.xy/256.0;
+
+    float height = mix(atmos.groundRadiusMM, atmos.atmosphereRadiusMM, uv.y);
+
+    float tanTheta = atmos.groundRadiusMM / atmos.atmosphereRadiusMM;
+
+    float cosThetaMax = -cos(atan(tanTheta));
+
+    //float sunCosTheta = 2.0*uv.x - 1.0;
+    float sunCosTheta = mix(cosThetaMax,1.0,uv.x);
+
+    float sunTheta = safeAcos(sunCosTheta);
+
+    vec3 pos = vec3(0.0, height, 0.0); 
+    vec3 sunDir = normalize(vec3(0.0, sunCosTheta, -sin(sunTheta)));
+
+    //vec3 background = atmos.rayleighScatteringBase/14.0;
+    vec3 transmittance = getSunTransmittance(pos,sunDir);
+
+    if(atmos.groundRadiusMM == 0.0)
+        transmittance = vec3(1.0,0.5,0.1);
+    imageStore(transmittanceLUT,scrpos,vec4(transmittance, 0.0));
+}
