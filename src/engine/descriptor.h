@@ -15,6 +15,8 @@ class Descriptor
 
     VkDescriptorSet& getSet();
 
+    VkDescriptorSet makeSet();
+
     private:
 
     void release();

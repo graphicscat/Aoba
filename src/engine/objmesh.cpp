@@ -94,6 +94,8 @@ bool Mesh::load_from_obj(const char* filename)
                     attrib.vertices[3 * index.vertex_index + 1],
                     attrib.vertices[3 * index.vertex_index + 2]
                 };
+				bounding_box.MaxPoint = vkinit::MaxVec(vertex.position,bounding_box.MaxPoint);
+				bounding_box.MinPoint = vkinit::MinVec(vertex.position,bounding_box.MinPoint);
 
                 vertex.uv = {
                     attrib.texcoords[2 * index.texcoord_index + 0],
@@ -170,4 +172,78 @@ void Mesh::init()
 Mesh::~Mesh()
 {
     release();
+}
+
+Mesh::Mesh(const char* path)
+{
+	float f = (float)0xfffff;
+	bounding_box.MaxPoint = glm::vec3(-f);
+	bounding_box.MinPoint = glm::vec3(f);
+	load_from_obj(path);
+
+	initBoundingBoxData();
+	m_pc.model = glm::mat4(1.0);
+}
+
+void Mesh::initBoundingBoxData()
+{
+	glm::vec3 x = (bounding_box.MaxPoint.x - bounding_box.MinPoint.x)*glm::vec3(1.0f,0.0f,0.0f);
+	glm::vec3 z = (bounding_box.MaxPoint.z - bounding_box.MinPoint.z)*glm::vec3(0.0f,0.0f,1.0f);
+
+	glm::vec3 p1 = bounding_box.MaxPoint;
+
+	//
+	glm::vec3 p2 = p1 - z;
+	glm::vec3 p3 = p2 - x;
+	glm::vec3 p4 = p3 + z;
+	glm::vec3 p7 = bounding_box.MinPoint;
+	glm::vec3 p8 = p7 + z;glm::vec3 p6 = p7+x;glm::vec3 p5 = p6+z;
+
+	m_bounding_box_vertices.push_back(p1);
+	m_bounding_box_vertices.push_back(p2);
+	m_bounding_box_vertices.push_back(p3);
+	m_bounding_box_vertices.push_back(p4);
+
+	m_bounding_box_vertices.push_back(p5);
+	m_bounding_box_vertices.push_back(p6);
+	m_bounding_box_vertices.push_back(p7);
+	m_bounding_box_vertices.push_back(p8);
+
+	m_bounding_box_indices = {0,1,1,2,2,3,3,0,
+							  0,4,1,5,2,6,3,7,
+							  4,5,5,6,6,7,7,4};
+	
+	size_t vertexBufferSize = m_bounding_box_vertices.size()*sizeof(glm::vec3);
+    size_t indexBufferSize = m_bounding_box_indices.size()*sizeof(uint32_t);
+
+    std::unique_ptr<Buffer> stagingVertBuffer = std::make_unique<Buffer>(vertexBufferSize,VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+    std::unique_ptr<Buffer> stagingIndexBuffer = std::make_unique<Buffer>(indexBufferSize,VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+
+    stagingVertBuffer->map(m_bounding_box_vertices.data());
+    stagingVertBuffer->unmap();
+
+    stagingIndexBuffer->map(m_bounding_box_indices.data());
+    stagingIndexBuffer->unmap();
+
+    m_bounding_box_vertexBuffer = std::make_shared<Buffer>(vertexBufferSize,VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    m_bounding_box_indexBuffer = std::make_shared<Buffer>(indexBufferSize,VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    VkCommandBuffer cmd{};
+    vkinit::allocateCmdBuffer(cmd,true);
+    VkBufferCopy bufferCopy{};
+    bufferCopy.size = vertexBufferSize;
+    bufferCopy.dstOffset = 0;
+    bufferCopy.srcOffset = 0;
+    vkCmdCopyBuffer(cmd,stagingVertBuffer->m_buffer,m_bounding_box_vertexBuffer->m_buffer,1,&bufferCopy);
+
+    bufferCopy.size = indexBufferSize;
+
+    vkCmdCopyBuffer(cmd,stagingIndexBuffer->m_buffer,m_bounding_box_indexBuffer->m_buffer,1,&bufferCopy);
+
+    vkinit::flushCmdBuffer(cmd);
+
+    stagingVertBuffer.reset();
+    stagingIndexBuffer.reset();
+
+
 }

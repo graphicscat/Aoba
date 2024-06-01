@@ -19,3 +19,15 @@
 #define WIND_TEX_DIM 512
 
 #define PATCH_SIZE 5 
+
+#define CUBEMAP_DIM 64
+
+#define SPECULAR_DIM 512
+
+#define BRDF_DIM 512
+
+#define M_PI 3.1415926536
+
+#define SHADOW_DIM 4096
+
+#define BLUR_MIP 6

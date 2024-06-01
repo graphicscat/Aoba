@@ -35,13 +35,29 @@ namespace std {
         }
     };
 }
+struct AABB
+{
+	AABB() = default;
+	~AABB() = default;
+
+	glm::vec3 MaxPoint;
+	glm::vec3 MinPoint;
+};
 
 struct Mesh {
 	std::vector<Vertex> m_vertices;
 	std::vector<uint32_t> m_indices;
 	std::shared_ptr<Buffer> m_vertexBuffer;
 	std::shared_ptr<Buffer> m_indexBuffer;
-	glm::vec3 objectColor = glm::vec3(0.0f);
+
+	struct PushConst
+	{
+		glm::vec4 objectColor = glm::vec4(0.0f);
+		glm::mat4 model = glm::mat4(1.0);
+	}m_pc;
+	
+
+	AABB bounding_box;
 
 	bool load_from_obj(const char* filename);
 
@@ -51,5 +67,15 @@ struct Mesh {
 
     Mesh() = default;
     ~Mesh();
+
+	Mesh(const char* );
+
+	std::vector<glm::vec3> m_bounding_box_vertices;
+	std::vector<uint32_t> m_bounding_box_indices;
+
+	std::shared_ptr<Buffer> m_bounding_box_vertexBuffer;
+	std::shared_ptr<Buffer> m_bounding_box_indexBuffer;
+
+	void initBoundingBoxData();
 
 };

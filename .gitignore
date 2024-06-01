@@ -1,3 +1,5 @@
 .vscode
 3rdlibs
 build
+assets
+shaders

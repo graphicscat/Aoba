@@ -12,9 +12,13 @@ target_link_libraries(engine PUBLIC
     Vulkan::Vulkan
     glm
     tinyobjloader
+    imgui
+    assimp
+    ktxlib
 )
 #target_include_directories(engine PUBLIC 3rdlibs/tinygltf)
 target_precompile_headers(engine PUBLIC ./pch.h)
 
 target_include_directories(engine PUBLIC ./ ${Vulkan_INCLUDE_DIR})
+
 

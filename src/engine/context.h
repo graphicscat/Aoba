@@ -43,6 +43,8 @@ class VulkanContext final
 
     Swapchain m_swapchain;
 
+    VkInstance getInstance();
+
     private:
 
     void initInstance();

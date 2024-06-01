@@ -7,6 +7,8 @@ void Swapchain::init(const int w,const int h)
 {
     VulkanContext* m_context = VulkanContext::get();
 
+    //VkSwapchainKHR oldswapchain = m_swapchain;
+
     querySwapchainSupport(w,h);
     VkSwapchainCreateInfoKHR swapchainInfo{};
     swapchainInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -58,8 +60,9 @@ void Swapchain::querySwapchainSupport(const int w,const int h)
 
     for(const auto& format:surfaceFormats)
     {
-        if(format.format == VK_FORMAT_R8G8B8_SRGB&&
+        if(format.format == VK_FORMAT_B8G8R8A8_UNORM&&
         format.colorSpace == VK_COLORSPACE_SRGB_NONLINEAR_KHR){
+            LOG_WARN("SwapChian Format Set");
             m_details.format = format;
             break;
         }

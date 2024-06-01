@@ -25,10 +25,12 @@ GraphicsPipeline::GraphicsPipeline(const std::string& vs,const std::string& fs,V
 		LOG_ERROR("Error when building the fragment shader");
 	}
 
+    if(!fs.empty())
     m_shaderModulePool.push_back(m_fragShader);
     m_shaderModulePool.push_back(m_vertexShader);
 
     m_shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT,m_vertexShader));
+    if(!fs.empty())
     m_shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT,m_fragShader));
     
     VkPipelineLayoutCreateInfo layoutInfo{};
@@ -92,7 +94,7 @@ GraphicsPipeline::GraphicsPipeline(const std::string& vs,const std::string& fs,V
 	colorBlending.attachmentCount = m_attachmentCount;
 	colorBlending.pAttachments = m_colorBlendAttachment.data();
 
-    m_colorBlending = colorBlending;
+    m_colorBlendState = colorBlending;
 
     m_graphicsPipelineInfo = vkinit::graphicsPipelineCreateInfo();
 
@@ -110,7 +112,7 @@ void GraphicsPipeline::create()
     m_graphicsPipelineInfo.pVertexInputState = &m_vertexInputInfo;
     m_graphicsPipelineInfo.pInputAssemblyState = &m_inputAssembly;
     m_graphicsPipelineInfo.pRasterizationState = &m_rasterizer;
-    m_graphicsPipelineInfo.pColorBlendState = &m_colorBlending;
+    m_graphicsPipelineInfo.pColorBlendState = &m_colorBlendState;
     m_graphicsPipelineInfo.stageCount = uint32_t(m_shaderStages.size());
     m_graphicsPipelineInfo.pStages = m_shaderStages.data();
     m_graphicsPipelineInfo.pViewportState = &m_viewStateInfo;
@@ -147,6 +149,12 @@ void GraphicsPipeline::setRasterizationState(VkPipelineRasterizationStateCreateI
     m_rasterizer = ci;
 }
 
+void GraphicsPipeline::setDepthStencilState(bool depthTest, bool depthWrite)
+{
+    m_depthStencil.depthTestEnable = depthTest?VK_TRUE:VK_FALSE;
+    m_depthStencil.depthWriteEnable = depthWrite?VK_TRUE:VK_FALSE;
+}
+
 void GraphicsPipeline::setTessellationShaders(const char* tesc, const char* tese)
 {
     if (!vkinit::loadShaderModule(tesc, &m_tescShader))
@@ -173,6 +181,62 @@ void GraphicsPipeline::setTessellationState(VkPipelineTessellationStateCreateInf
     m_graphicsPipelineInfo.pTessellationState = &m_tesselationState;
 }
 
+void GraphicsPipeline::setColorBlendState(uint32_t num)
+{
+    m_colorBlendAttachment.clear();
+
+    for(int i = 0 ;i<num;i++)
+    {
+        m_colorBlendAttachment.push_back(vkinit::colorBlendAttachmentState());
+    }
+
+    VkPipelineColorBlendStateCreateInfo colorBlending = {};
+	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	colorBlending.pNext = nullptr;
+
+	colorBlending.logicOpEnable = VK_FALSE;
+	colorBlending.logicOp = VK_LOGIC_OP_COPY;
+	colorBlending.attachmentCount = num;
+	colorBlending.pAttachments = m_colorBlendAttachment.data();
+    
+    m_colorBlendState = colorBlending;
+}
+
+void GraphicsPipeline::setColorBlendState(std::vector<VkPipelineColorBlendAttachmentState>& blendAttachments)
+{
+    VkPipelineColorBlendStateCreateInfo colorBlending = {};
+	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	colorBlending.pNext = nullptr;
+
+	colorBlending.logicOpEnable = VK_FALSE;
+	colorBlending.logicOp = VK_LOGIC_OP_COPY;
+	colorBlending.attachmentCount = blendAttachments.size();
+	colorBlending.pAttachments = blendAttachments.data();
+    
+    m_colorBlendState = colorBlending;
+}
+
+void GraphicsPipeline::setViewport(VkExtent2D ext)
+{
+    m_viewport.width = ext.width;
+    m_viewport.height = ext.height;
+
+    m_scissor.extent = ext;
+}
+
+void GraphicsPipeline::setDynamicState(std::vector<VkDynamicState>& dynamicStateEnables)
+{
+    m_dynamicState = vkinit::pipelineDynamicStateCreateInfo(dynamicStateEnables);
+    m_graphicsPipelineInfo.pDynamicState = &m_dynamicState;
+}
+
+void GraphicsPipeline::setCullMode(VkCullModeFlags cullmode)
+{
+    VkPipelineRasterizationStateCreateInfo rsci = vkinit::rasterizationStateCreateInfo(VK_POLYGON_MODE_FILL);
+    rsci.cullMode = cullmode;
+    this->setRasterizationState(rsci);
+}
+
 GraphicsPipeline::~GraphicsPipeline()
 {
     vkDestroyPipelineLayout(VulkanContext::get()->getDevice(),m_pipelineLayout,nullptr);
@@ -189,7 +253,7 @@ VkPipelineLayout ComputePipeline::getLayout()
     return m_pipelineLayout;
 }
 
-ComputePipeline::ComputePipeline(const char* compShader, VkDescriptorSetLayout desLayout)
+ComputePipeline::ComputePipeline(const char* compShader, VkDescriptorSetLayout desLayout,uint32_t pcsize)
 {
     VkShaderModule m_compShader{};
     if (!vkinit::loadShaderModule(compShader, &m_compShader))
@@ -199,10 +263,22 @@ ComputePipeline::ComputePipeline(const char* compShader, VkDescriptorSetLayout d
 
     VkPipelineShaderStageCreateInfo shaderStageInfo = vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_COMPUTE_BIT,m_compShader);
 
+    VkPushConstantRange range;
     VkPipelineLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     layoutInfo.setLayoutCount = 1;
     layoutInfo.pSetLayouts = &desLayout;
+
+    if(pcsize)
+    {
+        range.offset = 0;
+        range.size = pcsize;
+        range.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        layoutInfo.pushConstantRangeCount = 1;
+        layoutInfo.pPushConstantRanges = &range;
+    }
+    
     VK_CHECK(vkCreatePipelineLayout(VulkanContext::get()->getDevice(),&layoutInfo,nullptr,&m_pipelineLayout));
     LOG_TRACE("Init ComputePipelineLayout success");
 

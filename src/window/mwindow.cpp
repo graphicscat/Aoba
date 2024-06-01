@@ -36,14 +36,14 @@ void MWindow::init()
 
     GLFWimage ico;
 
-    ico.pixels = stbi_load("../../src/aoba.png",&ico.width,&ico.height,0,4);
+    //ico.pixels = stbi_load("../../src/aoba.png",&ico.width,&ico.height,0,4);
     
     glfwMakeContextCurrent(window);
     glfwSetWindowUserPointer(window, (void*)(this));
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     glfwSetCursorPos(window, m_width, m_height);
-    glfwSetWindowIcon(window, 1, &ico);
+    //glfwSetWindowIcon(window, 1, &ico);
 
     //set callback
     glfwSetCursorPosCallback(window,callbackOnMouseMove);
@@ -73,10 +73,10 @@ void MWindow::tick(float delta)
 
     if(m_active)
     {
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         m_mouseOffset.x = m_mousePos.x - m_mouseLastPos.x;
         m_mouseOffset.y = m_mouseLastPos.y - m_mousePos.y;
-        m_cam->ProcessMouseMovement(m_mouseOffset.x,m_mouseOffset.y);
+        m_cam->ProcessMouseMovement(m_mouseOffset.x,-m_mouseOffset.y);
     }
     else{
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);

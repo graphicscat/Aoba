@@ -15,7 +15,7 @@ void Engine::init()
 
     VulkanContext::get()->init(this);
 
-    m_scene = std::make_unique<ShaderToy>();
+    m_scene = std::make_unique<Particle>();
 
     m_scene->init();
 
@@ -31,6 +31,8 @@ void Engine::tick()
 
         auto tStart = std::chrono::high_resolution_clock::now();
 
+        m_scene->update(deltaTime);
+        
         m_scene->tick();
         m_frameCount++;
 
@@ -39,8 +41,6 @@ void Engine::tick()
         auto tDiff = std::chrono::duration<double, std::milli>(tEnd - tStart).count();
 
         deltaTime = (float)tDiff / 1000.0f;
-
-        m_scene->update(deltaTime);
 
         m_win->tick(deltaTime);
 

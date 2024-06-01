@@ -17,6 +17,11 @@ VulkanContext* VulkanContext::get()
     return &context;
 }
 
+VkInstance VulkanContext::getInstance()
+{
+    return m_instance;
+}
+
 void VulkanContext::init(Engine* engine)
 {
     m_engine = engine;
@@ -77,6 +82,17 @@ void VulkanContext::initInstance()
     queueInfo.queueCount = 1;
     queueInfo.pQueuePriorities = &queuePriority;
     queueInfo.queueFamilyIndex = m_graphicsQueueFamily;
+
+    VkPhysicalDeviceFeatures deviceFeatures;
+    vkGetPhysicalDeviceFeatures(m_physicalDevice,&deviceFeatures);
+    if(deviceFeatures.multiDrawIndirect == VK_TRUE)
+    {
+        LOG_INFO("Multi enable");
+    }
+
+    VkPhysicalDeviceProperties m_gpuProp;
+    vkGetPhysicalDeviceProperties(m_physicalDevice,&m_gpuProp);
+    LOG_INFO("Max Push Constant Size: {}",m_gpuProp.limits.maxPushConstantsSize);
 
     //features
     VkPhysicalDeviceFeatures features{};
@@ -230,10 +246,10 @@ void VulkanContext::initDescriptorPool()
 {
     std::vector<VkDescriptorPoolSize> sizes = 
 	{
-		{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10},
-		{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,10},
-        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,10},
-        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,10}
+		{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 100},
+		{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,100},
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,100},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,100}
 	};
 
 	VkDescriptorPoolCreateInfo poolInfo{};

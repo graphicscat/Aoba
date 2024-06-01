@@ -22,6 +22,44 @@ namespace vkinit
         alignas(16) glm::vec2 uv;
     };
 
+    struct Plane
+    {
+        glm::vec4 v1;
+        glm::vec4 v2;
+        glm::vec4 v3;
+        glm::vec4 v4;
+    };
+
+    struct LightUBO
+    {
+        glm::mat4 lightSpace;
+        glm::vec4 pos;
+        Plane rectLight;
+    };
+
+    inline glm::vec3 MinVec(const glm::vec3& v1,const glm::vec3& v2)
+    {
+        return glm::vec3(
+        std::min(v1.x,v2.x),
+        std::min(v1.y,v2.y),
+        std::min(v1.z,v2.z)
+        );
+    }
+
+    inline glm::vec3 MaxVec(const glm::vec3& v1,const glm::vec3& v2)
+    {
+        return glm::vec3(
+        std::max(v1.x,v2.x),
+        std::max(v1.y,v2.y),
+        std::max(v1.z,v2.z)
+        );
+    }
+
+    inline void PrintVec(const glm::vec3& v)
+    {
+        std::cout<<std::endl<<v.x<<' '<<v.y<<' '<<v.z;
+    }
+
     inline VkImageViewCreateInfo imageview_begin_info(VkImage image,VkFormat format,VkImageAspectFlagBits aspect)
     {
         VkImageViewCreateInfo createInfo{};
@@ -93,7 +131,7 @@ namespace vkinit
         info.polygonMode = polygonMode;
         info.lineWidth = 1.0f;
         //no backface cull
-        info.cullMode = VK_CULL_MODE_NONE;
+        info.cullMode = VK_CULL_MODE_BACK_BIT;
         info.frontFace = frontFace;
         //no depth bias
         info.depthBiasEnable = VK_FALSE;
@@ -125,6 +163,20 @@ namespace vkinit
         colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
             VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
         colorBlendAttachment.blendEnable = VK_FALSE;
+        return colorBlendAttachment;
+    }
+
+    inline VkPipelineColorBlendAttachmentState colorBlendAttachmentState(bool blendEnable) {
+        VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+        colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+            VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        colorBlendAttachment.blendEnable = blendEnable?VK_TRUE:VK_FALSE;
+        colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+        colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
         return colorBlendAttachment;
     }
 
@@ -246,7 +298,7 @@ namespace vkinit
         return info;
     }
 
-    inline VkAttachmentDescription createAttachmentDescription(VkFormat format,bool depth,
+    inline VkAttachmentDescription createAttachmentDescription(VkFormat format,bool depth,bool depthNeedSample = false,
     VkSampleCountFlagBits sampleCounts = VK_SAMPLE_COUNT_1_BIT)
     {
         VkAttachmentDescription des{};
@@ -258,7 +310,7 @@ namespace vkinit
         des.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         if(depth)
         {
-            des.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            des.finalLayout = depthNeedSample?VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             des.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         }
         else
@@ -316,6 +368,18 @@ namespace vkinit
         pipelineColorBlendAttachmentState.colorWriteMask = colorWriteMask;
         pipelineColorBlendAttachmentState.blendEnable = blendEnable;
         return pipelineColorBlendAttachmentState;
+    }
+
+    inline VkPipelineDynamicStateCreateInfo pipelineDynamicStateCreateInfo(
+        const std::vector<VkDynamicState>& pDynamicStates,
+        VkPipelineDynamicStateCreateFlags flags = 0)
+    {
+        VkPipelineDynamicStateCreateInfo pipelineDynamicStateCreateInfo{};
+        pipelineDynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        pipelineDynamicStateCreateInfo.pDynamicStates = pDynamicStates.data();
+        pipelineDynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(pDynamicStates.size());
+        pipelineDynamicStateCreateInfo.flags = flags;
+        return pipelineDynamicStateCreateInfo;
     }
 
     inline VkVertexInputBindingDescription vertexInputBindingDescription(
@@ -443,4 +507,33 @@ namespace vkinit
         ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
         return ci;
     }
+
+    inline VkViewport viewport(
+    float width,
+    float height,
+    float minDepth,
+    float maxDepth)
+    {
+        VkViewport viewport {};
+        viewport.width = width;
+        viewport.height = height;
+        viewport.minDepth = minDepth;
+        viewport.maxDepth = maxDepth;
+        return viewport;
+    }
+
+    inline VkRect2D rect2D(
+        int32_t width,
+        int32_t height,
+        int32_t offsetX,
+        int32_t offsetY)
+    {
+        VkRect2D rect2D {};
+        rect2D.extent.width = width;
+        rect2D.extent.height = height;
+        rect2D.offset.x = offsetX;
+        rect2D.offset.y = offsetY;
+        return rect2D;
+    }
+
 }

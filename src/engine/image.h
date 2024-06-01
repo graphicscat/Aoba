@@ -1,37 +1,8 @@
 #pragma once
 
 #include<pch.h>
-
-// struct ImageBuilder
-// {
-//     VkImageType m_type;
-
-//     uint32_t m_layerCount = 1;
-
-//     uint32_t m_width = 0;
-//     uint32_t m_height = 0;
-//     uint32_t m_depth = 1;
-
-//     uint32_t m_mipmapLevel = 1;
-
-//     VkMemoryPropertyFlags m_memProperty;
-
-//     VkFormat m_format;
-
-//     VkImageUsageFlags m_usage;
-
-//     ImageBuilder& setExtent(uint32_t w, uint32_t h);
-//     ImageBuilder& setImageType(VkImageType type);
-//     ImageBuilder& setLayerCount(uint32_t layerCount);
-//     ImageBuilder& setMipMapLevel(uint32_t mipmaplevel);
-//     ImageBuilder& setMemProperty(VkMemoryPropertyFlags memprop);
-//     ImageBuilder& setFormat(VkFormat format);
-//     ImageBuilder& setUsage(VkImageUsageFlags usages);
-
-//     bool isComplete() const;
-
-// };
-
+#include <ktx.h>
+#include <ktxvulkan.h>
 
 class Image
 {
@@ -40,19 +11,32 @@ class Image
     //Image(uint32_t w,uint32_t h,VkFormat format, uint32_t lc = 1, uint32_t ml = 1);
     Image() = default;
 
+    Image(const char*, VkFormat ,bool mipmap = false);
+
     Image(const VkImageCreateInfo& createinfo,VkImageAspectFlags aspect,
     VkMemoryPropertyFlags property = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    void loadFromFile(const char* path, VkFormat imageFormat = VK_FORMAT_R8G8B8A8_SRGB, bool hdr = false);
+    void loadFromFile(const char* path, VkFormat imageFormat = VK_FORMAT_R8G8B8A8_SRGB, bool hdr = false , bool mipmap = false);
     
     ~Image();
+
+
+    void loadKTXFromFile(std::string filename,VkFormat format, VkImageLayout imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     void init(const VkImageCreateInfo& createinfo,VkImageAspectFlags aspect,VkMemoryPropertyFlags property = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     void release();
 
     void transitionImaglayout(VkImageLayout oldLayout,VkImageLayout newLayout);
 
+    void transitionImaglayout(VkImageLayout oldLayout,VkImageLayout newLayout,VkCommandBuffer cmd);
+
     void writeToSet(VkDescriptorSet set, VkDescriptorType type, uint32_t binding);
+
+    void  setDescriptorImageLayout(VkImageLayout);
+
+    void generateMipmaps();
+
+    void generateMipmaps(VkCommandBuffer cmd);
 
     uint32_t getWidth();
 
@@ -77,15 +61,16 @@ class Image
 
     void createSampler();
 
+    ktxResult loadKTXFile(std::string filename, ktxTexture **target);
 
-    VkImageLayout m_initLayout;
-
-    VkImageLayout m_finalLayout;
+    VkImageLayout m_currentLayout;
 
     VkImageCreateInfo m_createInfo{};
 
     bool m_sampled = false;
 
     void copyBufferToImage(VkBuffer);
+
+    void copyBufferToImage(VkBuffer buffer, std::vector<VkBufferImageCopy>& regions);
 
 };

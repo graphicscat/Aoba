@@ -35,6 +35,9 @@ void main()
     pos.x += snoise(vec3(pos.xz, 0.0) * 3.0) * 0.05;
     pos.z += snoise(vec3(pos.xz, 0.0) * 4.0) * 0.05;
 
+    pos.x = clamp(pos.x,-dimension * 0.15+0.5,dimension);
+    pos.z = clamp(pos.z,-dimension * 0.15+0.2,dimension);
+
     vec2 uv = pos.xz + (vec2(dimension) * 0.5)*0.3;
     uv /= dimension*0.3;
 

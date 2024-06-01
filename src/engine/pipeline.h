@@ -37,6 +37,18 @@ class GraphicsPipeline
 
     void setTessellationState(VkPipelineTessellationStateCreateInfo);
 
+    void setColorBlendState(uint32_t);
+
+    void setColorBlendState(std::vector<VkPipelineColorBlendAttachmentState>& blendAttachments);
+
+    void setDepthStencilState(bool depthTest, bool depthWrite);
+
+    void setViewport(VkExtent2D);
+
+    void setDynamicState(std::vector<VkDynamicState>& dynamicStateEnables);
+
+    void setCullMode(VkCullModeFlags cullmode);
+
     private:
 
     VkPipeline m_pipeline;
@@ -91,6 +103,7 @@ class GraphicsPipeline
 
     VkPushConstantRange range{};
 
+    VkPipelineDynamicStateCreateInfo m_dynamicState;
 };
 
 class ComputePipeline
@@ -99,7 +112,7 @@ class ComputePipeline
 
     ComputePipeline() = default;
 
-    ComputePipeline(const char* compShader, VkDescriptorSetLayout desLayout);
+    ComputePipeline(const char* compShader, VkDescriptorSetLayout desLayout,uint32_t pcsize = 0);
 
     ~ComputePipeline();
 

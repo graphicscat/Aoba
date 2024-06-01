@@ -8,7 +8,7 @@ class Framebuffer
 {
     public:
     Framebuffer() = default;
-    Framebuffer(std::shared_ptr<RenderPass> renderpass);
+    Framebuffer(std::shared_ptr<RenderPass> renderpass,uint32_t w = 0, uint32_t h = 0);
     ~Framebuffer();
 
 
@@ -18,9 +18,10 @@ class Framebuffer
     //Image depth;
 
     std::unique_ptr<Image> m_depth;
+    std::vector<std::shared_ptr<Image>> m_colorAttachments;
 
     private:
 
-    void init(std::shared_ptr<RenderPass> renderpass);
+    void init(std::shared_ptr<RenderPass> renderpass,uint32_t w, uint32_t h);
     void release();
 };
